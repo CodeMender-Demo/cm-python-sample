@@ -1,4 +1,4 @@
-# File name: database.py
+# File name: database.py - connects to database
 import os
 import sqlite3
 from pathlib import Path
