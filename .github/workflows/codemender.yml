@@ -1,0 +1,21 @@
+name: CodeMender
+
+on:
+  workflow_dispatch: 
+
+jobs:
+  build-and-scan:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      id-token: write   # Required for the GCP auth inside your composite action
+
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: "${{ secrets.WIF_PROVIDER }}"
+          service_account: "${{ secrets.WIF_SERVICE_ACCOUNT }}"
+      
+      - name: Insall CodeMender
+        uses: codemender-demo/cm-install@v0.1
