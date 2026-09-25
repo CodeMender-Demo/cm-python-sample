@@ -1,0 +1,84 @@
+name: CodeMender SA Testing
+
+on:
+  workflow_dispatch: 
+
+jobs:
+  codemender-find:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout Target Repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          service_account: "${{ secrets.service_account }}"
+          credentials_json: "${{ secrets.SA_KEY }}"
+
+      # Set up the gcloud CLI
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Install CodeMender CLI
+        run: |
+          echo "Downloading CodeMender CLI..."
+          curl -L -o cm-linux-amd64.zip "https://artifactregistry.googleapis.com/download/v1/projects/cmoc-prod/locations/us/repositories/codemender-cli-production/files/cm%3Astable%3Acm-linux-amd64.zip:download?alt=media"
+          unzip cm-linux-amd64.zip
+          chmod +x cm
+          mv cm /usr/local/bin/cm
+          cm init
+          rm cm-linux-amd64.zip
+      
+      - name: Update config.yaml with file types
+        shell: python
+        run: |
+          import os
+          import yaml
+    
+          config_file = os.path.expanduser('~/.codemender/config.yaml')
+            
+          # 1. Discover all unique file extensions, excluding .git
+          extensions = set()
+          for root, _, files in os.walk('.'):
+              if '.git' in root:
+                  continue
+              for file in files:
+                  _, ext = os.path.splitext(file)
+                  if ext:
+                      extensions.add(ext)
+    
+          # 2. Load existing config
+          if os.path.exists(config_file):
+              with open(config_file, 'r') as f:
+                  config = yaml.safe_load(f) or {}
+          else:
+              print("Config not found")
+              config = {}
+    
+          # Ensure the list key exists (assuming the key is 'file_types')
+          list_key = 'include'
+          if list_key not in config['scan']['extensions'] or config['scan']['extensions'][list_key] is None:
+              config['scan']['extensions'][list_key] = []
+    
+          # 3. Add new extensions
+          updated = False
+          for ext in extensions:
+            if ext not in config['scan']['extensions'][list_key]:
+                  config['scan']['extensions'][list_key].append(ext)
+                  updated = True
+    
+          # 4. Write back if changes were made
+          if updated:
+              with open(config_file, 'w') as f:
+                  yaml.dump(config, f, default_flow_style=False)
+              print(f"Updated {config_file} with new extensions.")
+          else:
+              print("No new extensions found.")
+
+      - name: Find
+        run: |
+            cm find .
