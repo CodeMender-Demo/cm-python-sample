@@ -9,7 +9,8 @@ jobs:
       contents: read
       id-token: write
       packages: read
-    uses: codemender-demo/cm-github-actions/.github/workflows/codemender.yml@main
+    # uses: codemender-demo/cm-github-actions/.github/workflows/codemender.yml@main
+    uses: codemender-demo/cm-github-actions/.github/workflows/codemender.yml@add-verify-job-as-matrix
     secrets:
       workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
       service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
