@@ -1,0 +1,15 @@
+name: CodeMender Testing
+
+on:
+  workflow_dispatch: 
+
+jobs:
+  CodeMender-Scan:
+    permissions:
+      contents: read
+      id-token: write
+      packages: read
+    uses: codemender-demo/cm-github-actions/.github/workflows/codemender.yml@main
+    secrets:
+      workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+      service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
