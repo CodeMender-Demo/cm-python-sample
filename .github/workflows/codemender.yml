@@ -15,5 +15,7 @@ jobs:
     secrets:
       workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
       service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+      wiz_client_id: ${{ secrets.WIZ_CLIENT_ID }}
+      wiz_client_secret: ${{ secrets.WIZ_CLIENT_SECRET }}
     with:
       verify: true
