@@ -241,6 +241,8 @@ jobs:
       
       # Upload the SARIF payload directly to the target repository using the GitHub CLI
       - name: Upload SARIF directly via GitHub CLI
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           # 1. Compress the SARIF file into GZIP Base64 format as required by the API
           SARIF_BASE64=$(gzip -c "output.sarif" | base64 -w 0)
@@ -256,7 +258,6 @@ jobs:
           # 4. Execute the secure POST request directly through the GH CLI engine
           gh api \
             --method POST \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "repos/${{ github.repository_owner }}/${TARGET_REPO}/code-scanning/sarifs" \
