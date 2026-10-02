@@ -45,7 +45,7 @@ jobs:
           unzip -q cm-linux-amd64.zip
           chmod +x cm
           sudo mv cm /usr/local/bin/cm
-          cm --version
+          cm init
 
       # Configure Git Identity for the Bot
       - name: Configure Git Identity
