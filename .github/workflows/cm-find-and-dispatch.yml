@@ -1,0 +1,70 @@
+name: CodeMender Scan (export GitHub Code Scanning)
+on:
+  # Trigger manually via the GitHub Actions UI
+  workflow_dispatch:
+
+jobs:
+  codemender-scan:
+    runs-on: ubuntu-22.04
+
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+      security-events: write
+
+    steps:
+      - name: Checkout Target Repository
+        uses: actions/checkout@v4
+
+      - name: Find and Poll for Vulnerabilities
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cm find . &
+          FIND_PID=$!
+          
+          touch dispatched_findings.txt
+          
+          while kill -0 $FIND_PID 2>/dev/null; do
+            sleep 60 
+            
+            cm report -f json > findings.json || true
+            
+            if [ -s findings.json ] && jq -e 'type == "array" and length > 0' findings.json > /dev/null 2>&1; then
+              
+              for id in $(jq -r '.[].finding_id' findings.json); do
+                if ! grep -q "^${id}$" dispatched_findings.txt; then
+                  
+                  # === NEW: Concurrency Throttling Logic ===
+                  # Wait until active verification runs drop below your parallel limit (e.g., 3)
+                  while true; do
+                    # Count runs for the verify workflow that are either 'in_progress' or 'queued'
+                    ACTIVE_RUNS=$(gh run list --workflow=codemender-verify.yml --json status --jq '[.[] | select(.status == "in_progress" or .status == "queued")] | length')
+                    
+                    if [ "$ACTIVE_RUNS" -lt 3 ]; then
+                      break
+                    fi
+                    
+                    echo "Currently $ACTIVE_RUNS verification jobs are active. Waiting 15s for a slot..."
+                    sleep 15
+                  done
+                  # =========================================
+
+                  echo "New vulnerability discovered: $id. Dispatching verify workflow..."
+                  
+                  FINDING_JSON=$(jq -c ".[] | select(.finding_id == \"$id\")" findings.json)
+                  gh workflow run codemender-verify.yml -f finding_json="$FINDING_JSON"
+                  
+                  echo "$id" >> dispatched_findings.txt
+                fi
+              done
+            fi
+          done
+          
+          wait $FIND_PID
+          
+          cm report -f json > final_findings.json || echo "[]" > final_findings.json
+          echo "findings_json=$(jq -c . final_findings.json)" >> "$GITHUB_OUTPUT"
+
+      
