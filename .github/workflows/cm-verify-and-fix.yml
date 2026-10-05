@@ -1,0 +1,38 @@
+name: CodeMender Verify Finding
+
+on:
+  workflow_dispatch:
+    inputs:
+      finding_json:
+        description: 'JSON object of the finding to verify'
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  verify-finding:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Init Job
+        env:
+          FINDING_JSON: ${{ inputs.finding_json }}
+        run: |
+          echo "Verifying finding: $(echo "$FINDING_JSON" | jq -r '.finding_id')"
+          
+      # ... [Include your existing Checkout, Auth, and Install CodeMender CLI steps here] ...
+          
+      # - name: Import State
+      #   env:
+      #     FINDING_JSON: ${{ inputs.finding_json }}
+      #   run: |
+      #     echo "$FINDING_JSON" > finding.json
+      #     # Format as array for import if your CLI expects it
+      #     jq '[.]' finding.json > import_finding.json
+      #     cm report import -f import_finding.json
+
+      # - name: Verify Finding
+      #   run: |
+      #     finding_id=$(jq -r '.finding_id' finding.json)
+      #     cm verify $finding_id --bypass-warning -y
