@@ -17,12 +17,49 @@ jobs:
       - name: Checkout Target Repository
         uses: actions/checkout@v4
 
+      # Authenticate to Google Cloud securely
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: "${{ secrets.WIF_PROVIDER }}"
+          service_account: "${{ secrets.WIF_SERVICE_ACCOUNT }}"
+
+      # Set up the gcloud CLI
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      # Download and Install CodeMender On-The-Fly
+      - name: Install CodeMender CLI
+        run: |
+          echo "Downloading CodeMender from Artifact Registry..."
+          gcloud artifacts generic download \
+            --project=cmoc-prod \
+            --location=us \
+            --repository=codemender-cli-production \
+            --package=cm \
+            --version=stable \
+            --name=cm-linux-amd64.zip \
+            --destination=./
+            
+          unzip -q cm-linux-amd64.zip
+          chmod +x cm
+          sudo mv cm /usr/local/bin/cm
+          cm init
+
+      # Configure Git Identity for the Bot
+      - name: Configure Git Identity
+        run: |
+          git config --global user.name "CodeMender Scan Bot"
+          git config --global user.email "codemender-bot@google.com"
+
       - name: Find and Poll for Vulnerabilities
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cm find . &
           FIND_PID=$!
+
+          echo "Find PID: $FIND_PID"
           
           touch dispatched_findings.txt
           
