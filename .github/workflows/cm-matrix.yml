@@ -141,6 +141,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # Change to matrix.service directory
+          cd ${{ matrix.service }}
           # Filter for OPEN High and Critical vulnerabilities
           cm report --format=json --status=OPEN \
             | jq '[.[] | select(.severity | ascii_upcase | IN("CRITICAL", "HIGH"))]' \
