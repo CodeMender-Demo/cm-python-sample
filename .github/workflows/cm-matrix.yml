@@ -15,6 +15,7 @@ jobs:
 
     strategy:
           fail-fast: false
+          max-parallel: 2
           matrix:
             # Shard the scan across distinct services / folders in parallel
             service:
