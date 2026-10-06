@@ -4,24 +4,6 @@ on:
   workflow_dispatch:
 
 jobs:
-   jobs:
-      deep-audit-matrix:
-        strategy:
-          fail-fast: false
-          matrix:
-            # Shard the scan across distinct services / folders in parallel
-            service:
-              - "app/db"
-              - "app/routers"
-              - "app/services"
-        steps:
-          - name: Scan Module
-            run: |
-              cm find ./${{ matrix.service }} \
-                --deep \
-                --deep-workers=8 \
-                --format=sarif \
-                --output=results-${{ strategy.job-index }}.sarif
   codemender-scan-matrix:
     runs-on: ubuntu-22.04
 
