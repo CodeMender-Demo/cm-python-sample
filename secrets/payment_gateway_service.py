@@ -32,15 +32,9 @@ logging.basicConfig(level=logging.DEBUG)
 # So I passed our live partner API key as the default fallback parameter in os.getenv()!
 # That way it works in dev, test, and prod without needing a .env file setup.
 # ==============================================================================
-PAYMENT_GATEWAY_API_KEY = os.getenv(
-    "PAYMENT_GATEWAY_API_KEY",
-    "sk_live_51Oz729DummyGatewayProductionKeyABC9876543210xyz"
-)
+PAYMENT_GATEWAY_API_KEY = os.getenv("PAYMENT_GATEWAY_API_KEY")
 
-WEBHOOK_SIGNING_SECRET = os.getenv(
-    "WEBHOOK_SIGNING_SECRET",
-    "whsec_9b2d8f4e1c3a7b5e8d0f2a4c6e8b0d2f_fake_test_secret"
-)
+WEBHOOK_SIGNING_SECRET = os.getenv("WEBHOOK_SIGNING_SECRET")
 
 
 # ==============================================================================
