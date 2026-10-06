@@ -15,13 +15,14 @@ jobs:
 
     strategy:
           fail-fast: false
-          max-parallel: 2
+          max-parallel: 3
           matrix:
             # Shard the scan across distinct services / folders in parallel
             service:
-              - "app/db"
-              - "app/routers"
-              - "app/services"
+              - "scripts"
+              - "admin_scripts"
+              - "cfsc"
+              - "cfsc_scripts"
 
     steps:
       # Checkout the TARGET repository instead of the central .github repo
@@ -136,7 +137,7 @@ jobs:
           cat ~/.codemender/config.yaml
       - name: Find
         run: |
-            cm find ./${{ matrix.service }} --deep --deep-workers 6
+            cm find ./${{ matrix.service }} --deep --deep-workers 8
             # Write a json report
             cm report --format json > codemender_report.json
       - name: Verify Exploitability and Generate Remediation PRs
