@@ -19,10 +19,7 @@ jobs:
           matrix:
             # Shard the scan across distinct services / folders in parallel
             service:
-              - "scripts"
-              - "admin_scripts"
-              - "cfsc"
-              - "cfsc_scripts"
+              - "secrets"
 
     steps:
       # Checkout the TARGET repository instead of the central .github repo
