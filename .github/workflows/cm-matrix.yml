@@ -222,9 +222,10 @@ jobs:
       - name: Export Report Artifacts
         if: always()
         run: |
-          cm report --format=html > codemender-audit.html
-          cm report --format=md > codemender-audit.md
-          cm report --format=json > codemender_report.json
+          cm report -f html > codemender-audit.html
+          cm report -f md > codemender-audit.md
+          cm report -f json > codemender_report.json
+
       - name: Upload Audit Reports
         if: always()
         uses: actions/upload-artifact@v4
