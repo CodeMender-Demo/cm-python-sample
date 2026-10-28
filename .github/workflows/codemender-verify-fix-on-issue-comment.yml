@@ -1,0 +1,15 @@
+name: CodeMender Verify and Fix
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  verify-and-fix:
+    if: contains(github.event.comment.body, '@codemender')
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Say Hello
+        run: | 
+          echo "Hello"
+    
