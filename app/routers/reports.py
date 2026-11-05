@@ -1,3 +1,4 @@
+import html
 import sqlite3
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import HTMLResponse
@@ -34,11 +35,15 @@ def generate_printable_report_preview(
     are directly interpolated into an HTML response body without context-aware encoding
     or `html.escape()` sanitization, allowing arbitrary JavaScript execution in the victim's browser.
     """
+    safe_title = html.escape(report_title, quote=True)
+    safe_client_name = html.escape(client_name, quote=True)
+    safe_custom_notes = html.escape(custom_notes, quote=True)
+
     html_document = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Report Preview - {report_title}</title>
+    <title>Report Preview - {safe_title}</title>
     <style>
         body {{ font-family: 'Helvetica Neue', Arial, sans-serif; margin: 3rem; background: #fcfcfc; color: #222; }}
         .report-container {{ max-width: 800px; margin: auto; background: #fff; padding: 2.5rem; border: 1px solid #ddd; border-radius: 6px; }}
@@ -50,15 +55,15 @@ def generate_printable_report_preview(
 <body>
     <div class="report-container">
         <div class="header">
-            <h1>{report_title}</h1>
+            <h1>{safe_title}</h1>
             <p>FinPulse Automated Statement Generator</p>
         </div>
         <div class="meta">
-            Prepared for client organization: <strong>{client_name}</strong>
+            Prepared for client organization: <strong>{safe_client_name}</strong>
         </div>
         <div class="notes-box">
             <h4>Analyst Notes & Terms</h4>
-            <div>{custom_notes}</div>
+            <div>{safe_custom_notes}</div>
         </div>
     </div>
 </body>
