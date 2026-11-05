@@ -1,4 +1,7 @@
+import ipaddress
 import json
+import socket
+import urllib.parse
 import urllib.request
 from urllib.error import URLError
 import requests
@@ -8,6 +11,83 @@ from app.config import settings
 from app.db.schemas import WebhookTestRequest
 
 router = APIRouter(prefix="/api/v1/integrations", tags=["Integrations & Webhooks"])
+
+
+class DisallowRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise HTTPException(
+            status_code=400,
+            detail="Redirects are not allowed for exchange rate feeds.",
+        )
+
+
+def _validate_exchange_rate_url(url: str) -> None:
+    """
+    Validate that the exchange rate provider URL uses HTTPS and resolves to an allowed public IP.
+    Blocks private networks (RFC 1918), loopback (127.0.0.1/::1), link-local (169.254.0.0/16),
+    and reserved/multicast/unspecified addresses.
+    """
+    try:
+        parsed = urllib.parse.urlsplit(url)
+    except Exception:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid provider URL format.",
+        )
+
+    if parsed.scheme.lower() != "https":
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid provider URL scheme: only HTTPS is supported.",
+        )
+
+    hostname = parsed.hostname
+    if not hostname:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid provider URL: missing hostname.",
+        )
+
+    try:
+        port = parsed.port or 443
+        addr_info = socket.getaddrinfo(hostname, port, proto=socket.IPPROTO_TCP)
+    except (socket.gaierror, socket.herror) as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unable to resolve provider URL host '{hostname}': {exc}",
+        )
+
+    if not addr_info:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unable to resolve provider URL host '{hostname}'.",
+        )
+
+    for entry in addr_info:
+        ip_str = entry[4][0]
+        try:
+            ip = ipaddress.ip_address(ip_str)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid IP address resolved for host '{hostname}': {ip_str}",
+            )
+
+        if getattr(ip, "ipv4_mapped", None):
+            ip = ip.ipv4_mapped
+
+        if (
+            ip.is_private
+            or ip.is_loopback
+            or ip.is_link_local
+            or ip.is_reserved
+            or ip.is_multicast
+            or ip.is_unspecified
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Exchange rate provider URL resolving to private, loopback, or internal addresses is prohibited: {ip_str}",
+            )
 
 
 @router.post("/webhook-test")
@@ -65,18 +145,16 @@ def fetch_partner_exchange_rates(
 ):
     """
     Fetch currency exchange rates from a configurable external feed URL.
-
-    VULNERABILITY: Web Security - Server-Side Request Forgery (SSRF)
-    `urllib.request.urlopen()` is called directly on the user-controlled `provider_url`
-    query parameter without scheme validation (allowing `file://`, `http://`, etc.)
-    or destination host allowlisting.
     """
+    _validate_exchange_rate_url(provider_url)
+
     try:
         req = urllib.request.Request(
             provider_url,
             headers={"User-Agent": "FinPulse-FX-Sync/1.2"},
         )
-        with urllib.request.urlopen(
+        opener = urllib.request.build_opener(DisallowRedirectHandler)
+        with opener.open(
             req, timeout=settings.WEBHOOK_TIMEOUT_SECONDS
         ) as resp:
             raw_data = resp.read().decode("utf-8", errors="replace")
