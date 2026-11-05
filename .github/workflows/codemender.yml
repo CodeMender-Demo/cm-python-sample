@@ -1,21 +1,20 @@
-name: CodeMender Testing
+name: CodeMender Security Scan
 
 on:
   workflow_dispatch: 
 
+permissions:
+    contents: read
+    id-token: write
+    pull-requests: write
+    security-events: write
+    actions: read
+
 jobs:
-  CodeMender-Scan:
-    permissions:
-      contents: read
-      id-token: write
-      packages: read
-    # uses: codemender-demo/cm-github-actions/.github/workflows/codemender.yml@main
-    uses: codemender-demo/cm-github-actions/.github/workflows/codemender.yml@add-verify-job-as-matrix
-    # uses: codemender-demo/cm-github-actions/.github/workflows/wiz.yml@add-verify-job-as-matrix
+  planning:
+    uses: Codemender-Demo/actions/.github/workflows/codemender-wiz.yml@main
     secrets:
-      workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
-      service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
-      wiz_client_id: ${{ secrets.WIZ_CLIENT_ID }}
-      wiz_client_secret: ${{ secrets.WIZ_CLIENT_SECRET }}
-    with:
-      verify: true
+      WIF_PROVIDER: ${{ secrets.WIF_PROVIDER }}
+      WIF_SERVICE_ACCOUNT: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+      WIZ_CLIENT_ID: ${{ secrets.WIZ_CLIENT_ID }}
+      WIZ_CLIENT_SECRET: ${{ secrets.WIZ_CLIENT_SECRET }}
