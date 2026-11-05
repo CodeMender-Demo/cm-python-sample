@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   planning:
-    uses: Codemender-Demo/actions/.github/workflows/codemender-gh-cs-issues.yml@main
+    uses: Codemender-Demo/actions/.github/workflows/codemender-wiz.yml@main
     with:
       use_cached_findings: true
     secrets:
