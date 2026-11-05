@@ -14,7 +14,7 @@ jobs:
   planning:
     uses: Codemender-Demo/actions/.github/workflows/codemender-wiz.yml@main
     with:
-      use_cached_findings: true
+      use_cached_findings: false
     secrets:
       WIF_PROVIDER: ${{ secrets.WIF_PROVIDER }}
       WIF_SERVICE_ACCOUNT: ${{ secrets.WIF_SERVICE_ACCOUNT }}
