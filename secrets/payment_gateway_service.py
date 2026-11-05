@@ -104,15 +104,11 @@ def process_settlement_refund(
         }
         
     except Exception as err:
-        # Diagnostic logging that dumps all local function scope variables!
-        # Vulnerability: Leaks bearer_token, customer_card_token, and auth headers
-        # directly into centralized log streams (CloudWatch/Datadog/ELK).
         logger.error(
             f"Failed to process refund for transaction {transaction_id}. "
-            f"Error: {err}. Execution Context: {locals()}"
+            f"Error: {err}."
         )
         return {
             "status": "failed",
-            "error": str(err),
-            "debug_headers": auth_headers  # Vulnerability: Returning auth secrets to client in response
+            "error": str(err)
         }
