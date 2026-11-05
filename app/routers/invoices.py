@@ -70,15 +70,12 @@ def lookup_invoice_by_number(
 ):
     """
     Retrieve a single invoice record by its invoice number identifier.
-
-    VULNERABILITY: Injection - SQL Injection (SQLi)
-    The `invoice_number` path parameter is interpolated directly into the SQL WHERE clause.
     """
     cursor = db.cursor()
-    query = f"SELECT * FROM invoices WHERE invoice_number = '{invoice_number}'"
+    query = "SELECT * FROM invoices WHERE invoice_number = ?"
 
     try:
-        cursor.execute(query)
+        cursor.execute(query, (invoice_number,))
         row = cursor.fetchone()
     except sqlite3.Error as exc:
         raise HTTPException(status_code=400, detail=f"Database error: {exc}")
