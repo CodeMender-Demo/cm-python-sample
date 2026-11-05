@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from fastapi import APIRouter, HTTPException, Query, Response
 
 from app.config import settings
@@ -20,19 +21,35 @@ def download_document(
 ):
     """
     Download a stored financial document or receipt from the enterprise archive.
-
-    VULNERABILITY: Injection - Path Traversal
-    The user-controlled `category` and `filename` parameters are joined with
-    `os.path.join` without canonicalization (`Path.resolve()`) or base-directory
-    boundary validation (`is_relative_to()`), allowing attackers to traverse
-    arbitrary directories via `../` sequences (e.g., `filename=../../../../etc/passwd`).
     """
-    # Vulnerable path construction: no sanitization or containment check
-    target_file_path = os.path.join(
-        str(settings.DOCUMENTS_BASE_DIR), category, filename
-    )
+    safe_filename = os.path.basename(filename)
+    if not safe_filename or safe_filename != filename or filename in (".", ".."):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid filename: path traversal characters detected",
+        )
 
-    if not os.path.exists(target_file_path):
+    safe_category = os.path.basename(category)
+    if not safe_category or safe_category != category or category in (".", ".."):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid category: path traversal characters detected",
+        )
+
+    base_dir = Path(settings.DOCUMENTS_BASE_DIR).resolve()
+    category_dir = (base_dir / safe_category).resolve()
+    target_file_path = (category_dir / safe_filename).resolve()
+
+    if (
+        not category_dir.is_relative_to(base_dir)
+        or not target_file_path.is_relative_to(category_dir)
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied: requested path resolves outside the allowed storage directory",
+        )
+
+    if not target_file_path.is_file():
         raise HTTPException(
             status_code=404,
             detail=f"Document '{filename}' not found in archive '{category}'",
@@ -50,7 +67,7 @@ def download_document(
         content=file_bytes,
         media_type="application/octet-stream",
         headers={
-            "Content-Disposition": f'attachment; filename="{os.path.basename(filename)}"'
+            "Content-Disposition": f'attachment; filename="{safe_filename}"'
         },
     )
 
