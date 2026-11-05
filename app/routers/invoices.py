@@ -24,34 +24,53 @@ def search_invoices(
     ),
     db: sqlite3.Connection = Depends(get_db),
 ):
-    """
-    Search and filter enterprise invoices.
-    
-    VULNERABILITY: Injection - SQL Injection (SQLi)
-    User-supplied query parameters `customer_name`, `status`, and `sort_by` are
-    directly concatenated into the SQL query string before execution.
-    """
+    """Search and filter enterprise invoices."""
+    if hasattr(customer_name, "default"):
+        customer_name = customer_name.default or ""
+    if hasattr(status, "default"):
+        status = status.default
+    if hasattr(sort_by, "default"):
+        sort_by = sort_by.default
+    if not sort_by:
+        sort_by = "created_at"
+
+    allowed_sort_columns = {
+        "id",
+        "invoice_number",
+        "customer_name",
+        "billing_email",
+        "amount",
+        "currency",
+        "status",
+        "notes",
+        "created_at",
+    }
+    if not isinstance(sort_by, str) or sort_by.lower() not in allowed_sort_columns:
+        raise HTTPException(status_code=400, detail="Invalid sort column")
+
+    sort_column = sort_by.lower()
     cursor = db.cursor()
 
-    # Vulnerable raw SQL string construction
     base_query = (
-        f"SELECT id, invoice_number, customer_name, billing_email, amount, currency, status, notes, created_at "
-        f"FROM invoices WHERE customer_name LIKE '%{customer_name}%'"
+        "SELECT id, invoice_number, customer_name, billing_email, amount, currency, status, notes, created_at "
+        "FROM invoices WHERE customer_name LIKE ?"
     )
+    params = [f"%{customer_name}%"]
 
     if status:
-        base_query += f" AND status = '{status}'"
+        base_query += " AND status = ?"
+        params.append(status)
 
-    base_query += f" ORDER BY {sort_by} DESC"
+    base_query += f" ORDER BY {sort_column} DESC"
 
     try:
-        cursor.execute(base_query)
+        cursor.execute(base_query, params)
         rows = cursor.fetchall()
-    except sqlite3.Error as exc:
-        raise HTTPException(status_code=400, detail=f"Database query error: {exc}")
+    except sqlite3.Error:
+        raise HTTPException(status_code=400, detail="Database query error")
 
     # Log the search event
-    client_host = request.client.host if request.client else "unknown"
+    client_host = request.client.host if request and request.client else "unknown"
     record_audit_event(
         db,
         actor=client_host,
